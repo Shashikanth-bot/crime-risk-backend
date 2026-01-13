@@ -1,13 +1,14 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import pandas as pd
+import os
 
 app = Flask(__name__)
 CORS(app)
 
 # =======================
 # LOAD CSV FILES
-# ======================
+# =======================
 crime_df = pd.read_csv("city_crime_rates.csv")
 weights_df = pd.read_csv("risk_weights.csv")
 
@@ -74,6 +75,7 @@ def get_weight(factor, condition):
     ]
     return float(row["weight"].values[0]) if not row.empty else 1.0
 
+
 def get_risk_level(percent):
     if percent <= 20:
         return "Low"
@@ -89,14 +91,16 @@ def get_risk_level(percent):
 # =======================
 @app.route("/calculate", methods=["POST"])
 def calculate_risk():
-    data = request.json
+    data = request.get_json()
 
-    city = data["city"]
-    crime = data["crime"]
+    city = data.get("city")
+    crime = data.get("crime")
+    gender = data.get("gender", "").lower()
+    fatal_status = data.get("fatal_status", "")
+    case_status = data.get("case_status", "")
 
-    gender = data["gender"].lower()          # male / female / others
-    fatal_status = data["fatal_status"]      # fatal / non-fatal
-    case_status = data["case_status"]        # pending / closed
+    if not city or not crime:
+        return jsonify({"error": "City and crime are required"}), 400
 
     row = crime_df[
         (crime_df["city"].str.lower() == city.lower()) &
@@ -121,16 +125,13 @@ def calculate_risk():
         "exposure_risk_percent": risk,
         "risk_level": get_risk_level(risk),
         "precautions": PRECAUTIONS.get(crime.lower(), []),
-        "The risk shown is an estimate derived from historical crime trends and does not guarantee future events.
+        "disclaimer": "The risk shown is an estimate derived from historical crime trends and does not guarantee future events."
     })
 
-import os
 
+# =======================
+# APP ENTRY POINT
+# =======================
 if __name__ == "__main__":
-    import os
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
-
-
-
-
