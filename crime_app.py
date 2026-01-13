@@ -7,7 +7,7 @@ CORS(app)
 
 # =======================
 # LOAD CSV FILES
-# =======================
+# ======================
 crime_df = pd.read_csv("city_crime_rates.csv")
 weights_df = pd.read_csv("risk_weights.csv")
 
